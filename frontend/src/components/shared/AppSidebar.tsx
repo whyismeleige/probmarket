@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Activity,
   ListOrdered,
+  Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -23,6 +24,7 @@ import toast from "react-hot-toast";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/markets", label: "Markets", icon: TrendingUp },
+  { href: "/stocks", label: "Live Stocks", icon: Zap, badge: "LIVE" },
   { href: "/portfolio", label: "Portfolio", icon: BarChart3 },
   { href: "/orders", label: "My Orders", icon: ListOrdered },
   { href: "/wallet", label: "Wallet", icon: Wallet },
@@ -34,6 +36,7 @@ export function AppSidebar() {
   const router = useRouter();
   const { user } = useAppSelector((s) => s.auth);
   const { wallet } = useAppSelector((s) => s.wallet);
+  const { isConnected } = useAppSelector((s) => s.stocks);
 
   const handleLogout = async () => {
     await dispatch(logout());
@@ -75,8 +78,9 @@ export function AppSidebar() {
 
       {/* ── Navigation ────────────────────────────────────────────── */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, badge }) => {
           const isActive = pathname === href || pathname.startsWith(href + "/");
+          const isLive = href === "/stocks";
           return (
             <Link key={href} href={href}>
               <div
@@ -89,10 +93,21 @@ export function AppSidebar() {
               >
                 <Icon className={cn(
                   "size-4 shrink-0",
-                  isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground"
+                  isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground",
+                  isLive && isConnected && "text-emerald-400"
                 )} />
                 {label}
-                {isActive && (
+                {badge && (
+                  <span className={cn(
+                    "ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full",
+                    isConnected
+                      ? "bg-emerald-500/20 text-emerald-400 animate-pulse"
+                      : "bg-muted text-muted-foreground"
+                  )}>
+                    {badge}
+                  </span>
+                )}
+                {isActive && !badge && (
                   <ChevronRight className="size-3 ml-auto" />
                 )}
               </div>

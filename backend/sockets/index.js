@@ -28,7 +28,6 @@ const initializeSocket = (httpServer) => {
           ?.split("=")[1];
 
       if (!token) {
-        // Allow unauthenticated connections for public data (order book, market data)
         socket.userId = null;
         return next();
       }
@@ -38,7 +37,7 @@ const initializeSocket = (httpServer) => {
       next();
     } catch {
       socket.userId = null;
-      next(); // Still allow — just won't have user context
+      next();
     }
   });
 
@@ -65,7 +64,6 @@ const initializeSocket = (httpServer) => {
       socket.join(WS_ROOMS.MARKET(marketId));
       logger.debug(`📊 ${socket.id} subscribed to market ${marketId}`);
 
-      // Send immediate snapshot
       try {
         const snapshot = orderBookService.getMarketSnapshot(marketId);
         socket.emit(WS_EVENTS.ORDERBOOK_UPDATE, snapshot);
@@ -78,36 +76,26 @@ const initializeSocket = (httpServer) => {
       socket.leave(WS_ROOMS.MARKET(marketId));
     });
 
-    // ── Subscribe to global market list updates ────────────────────────────
-    socket.on("subscribe:global", () => {
-      socket.join(WS_ROOMS.GLOBAL_MARKETS);
+    // ── Live Market Simulator room ─────────────────────────────────────────
+    // Frontend joins "market-data" to receive real-time stock price updates.
+    // No auth required — this is public broadcast data.
+    socket.on("join-room", (room) => {
+      if (room === "market-data") {
+        socket.join("market-data");
+        logger.debug(`📈 ${socket.id} joined market-data room`);
+      }
+    });
+
+    socket.on("leave-room", (room) => {
+      socket.leave(room);
     });
 
     // ── Disconnect ─────────────────────────────────────────────────────────
     socket.on("disconnect", (reason) => {
       activeWebSocketConnections.dec();
-      logger.debug(`🔌 WebSocket disconnected: ${socket.id} (${reason})`);
+      logger.info(`🔌 WebSocket disconnected: ${socket.id} (reason: ${reason})`);
     });
   });
-
-  // ─── Start order book broadcast loop ──────────────────────────────────────
-  // Every 500ms, broadcast updated order book snapshots to subscribed clients
-  const BROADCAST_INTERVAL = parseInt(process.env.ORDERBOOK_BROADCAST_INTERVAL || "500");
-  setInterval(() => {
-    // For each market room with connected clients, broadcast the snapshot
-    const rooms = io.sockets.adapter.rooms;
-    for (const [roomName, clients] of rooms) {
-      if (roomName.startsWith("market:") && clients.size > 0) {
-        const marketId = roomName.replace("market:", "");
-        try {
-          const snapshot = orderBookService.getMarketSnapshot(marketId);
-          io.to(roomName).emit(WS_EVENTS.ORDERBOOK_UPDATE, snapshot);
-        } catch {
-          // Market book may not exist
-        }
-      }
-    }
-  }, BROADCAST_INTERVAL);
 
   return io;
 };

@@ -45,6 +45,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --color-bullish: var(--bullish);
+  --color-bearish: var(--bearish);
 }
 
 :root {
@@ -80,40 +82,44 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --bullish: oklch(0.55 0.18 145);
+  --bearish: oklch(0.55 0.22 25);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.13 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.17 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.17 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.93 0 0);
+  --primary-foreground: oklch(0.17 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.62 0 0);
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.65 0.20 22);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.50 0 0);
+  --chart-1: oklch(0.55 0.22 264);
+  --chart-2: oklch(0.65 0.18 145);
+  --chart-3: oklch(0.72 0.19 70);
+  --chart-4: oklch(0.60 0.24 303);
+  --chart-5: oklch(0.62 0.22 16);
+  --sidebar: oklch(0.15 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.55 0.22 264);
+  --sidebar-primary-foreground: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.22 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.50 0 0);
+  --bullish: oklch(0.65 0.18 145);
+  --bearish: oklch(0.62 0.22 25);
 }
 
 @layer base {
@@ -123,4 +129,98 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Probability bar colors ──────────────────────────────────────── */
+.prob-bar-yes {
+  background: oklch(0.65 0.18 145);
+}
+.prob-bar-no {
+  background: oklch(0.58 0.22 17.5);
+}
+
+/* ── Bullish / Bearish text colors ───────────────────────────────── */
+.text-bullish {
+  color: var(--bullish);
+}
+.text-bearish {
+  color: var(--bearish);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STOCK MARKET ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Flash animations for price updates ─────────────────────────── */
+@keyframes flash-green {
+  0%   { background-color: oklch(0.65 0.18 145 / 0.25); box-shadow: 0 0 12px oklch(0.65 0.18 145 / 0.4); }
+  60%  { background-color: oklch(0.65 0.18 145 / 0.12); box-shadow: 0 0 6px oklch(0.65 0.18 145 / 0.2); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes flash-red {
+  0%   { background-color: oklch(0.58 0.22 25 / 0.25); box-shadow: 0 0 12px oklch(0.58 0.22 25 / 0.4); }
+  60%  { background-color: oklch(0.58 0.22 25 / 0.12); box-shadow: 0 0 6px oklch(0.58 0.22 25 / 0.2); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+.flash-up {
+  animation: flash-green 0.6s ease-out forwards;
+}
+
+.flash-down {
+  animation: flash-red 0.6s ease-out forwards;
+}
+
+/* ── Scrolling ticker animation ─────────────────────────────────── */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 30s linear infinite;
+  will-change: transform;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Price number flip ──────────────────────────────────────────── */
+@keyframes price-flip {
+  0%   { transform: translateY(-4px); opacity: 0.5; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.price-flip {
+  animation: price-flip 0.2s ease-out;
+}
+
+/* ── Glow pulse for live indicator ─────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 4px 1px oklch(0.65 0.18 145 / 0.5); }
+  50%       { box-shadow: 0 0 8px 3px oklch(0.65 0.18 145 / 0.3); }
+}
+
+.glow-live {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ── Market card entry animation ────────────────────────────────── */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stock-card {
+  animation: card-enter 0.3s ease-out both;
+}
+
+/* ── Number count-up animation via CSS custom property ─────────── */
+@keyframes count-up {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
 }

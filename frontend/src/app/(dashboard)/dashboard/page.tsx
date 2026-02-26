@@ -4,12 +4,11 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchMarkets } from "@/store/slices/marketSlice";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { MarketCard } from "@/components/markets/MarketCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { cn, formatVolume } from "@/lib/utils";
-import { TrendingUp, Wallet2, BarChart3, Activity, ArrowRight } from "lucide-react";
+import { TrendingUp, Wallet2, BarChart3, Activity, ArrowRight, Zap, TrendingDown } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +17,7 @@ export default function DashboardPage() {
   const { user } = useAppSelector((s) => s.auth);
   const { wallet } = useAppSelector((s) => s.wallet);
   const { markets, isLoading } = useAppSelector((s) => s.market);
+  const { stocks, isConnected } = useAppSelector((s) => s.stocks);
 
   useEffect(() => {
     dispatch(fetchMarkets({ limit: 6, sort: "totalVolumeCents", order: "desc", status: "OPEN" }));
@@ -26,6 +26,10 @@ export default function DashboardPage() {
   const totalBalance = wallet?.totalBalanceCents ?? 0;
   const availableBalance = wallet?.availableBalanceCents ?? 0;
   const reservedBalance = wallet?.reservedBalanceCents ?? 0;
+
+  const stockList = Object.values(stocks).slice(0, 4);
+  const topGainer = Object.values(stocks).sort((a, b) => b.change - a.change)[0];
+  const topLoser = Object.values(stocks).sort((a, b) => a.change - b.change)[0];
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -70,6 +74,58 @@ export default function DashboardPage() {
           color="chart2"
         />
       </div>
+
+      {/* ── Live Stocks Mini Panel ─────────────────────────────── */}
+      {(stockList.length > 0 || isConnected) && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold">Live Market</h2>
+              {isConnected && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                  LIVE
+                </span>
+              )}
+            </div>
+            <Link href="/stocks">
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                View all <ArrowRight className="size-3" />
+              </Button>
+            </Link>
+          </div>
+
+          {stockList.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              Connecting to live market feed...
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {stockList.map((stock) => {
+                const isPos = stock.change >= 0;
+                return (
+                  <Link key={stock.symbol} href="/stocks">
+                    <div className={cn(
+                      "rounded-xl border p-3 transition-all hover:scale-[1.02] cursor-pointer group",
+                      stock.flash === "up" && "border-emerald-500/60 bg-emerald-500/5",
+                      stock.flash === "down" && "border-red-500/60 bg-red-500/5",
+                      !stock.flash && "border-border hover:border-border/80 bg-card",
+                    )}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black font-mono">{stock.symbol}</span>
+                        <span className={cn("text-[10px] font-bold", isPos ? "text-emerald-400" : "text-red-400")}>
+                          {isPos ? "+" : ""}{stock.change.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-base font-bold font-mono tabular-nums">${stock.price.toFixed(2)}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Active Markets ─────────────────────────────────────── */}
       <div>

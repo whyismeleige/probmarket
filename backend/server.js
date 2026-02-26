@@ -16,6 +16,7 @@ const errorHandler = require("./middleware/errorHandler");
 const { generalLimiter } = require("./middleware/rateLimiter.middleware");
 const { client: promClient, httpRequestDuration, activeMarkets } = require("./utils/metrics");
 const orderBookService = require("./services/orderBook.service");
+const MarketSimulator = require("./simulators/MarketSimulator");
 const logger = require("./utils/logger");
 const db = require("./models");
 
@@ -146,6 +147,15 @@ const startServer = async () => {
       logger.info(`📊 Metrics: http://localhost:${PORT}/metrics`);
       logger.info(`💚 Health:  http://localhost:${PORT}/health`);
     });
+
+    // 7. Start the live market simulator
+    //    Done AFTER server.listen so io is fully ready to accept rooms
+    const simulator = new MarketSimulator(io);
+    await simulator.init();
+
+    // Expose on app for graceful shutdown access
+    app.set("marketSimulator", simulator);
+
   } catch (err) {
     logger.error("❌ Server startup failed:", err);
     process.exit(1);
@@ -155,20 +165,27 @@ const startServer = async () => {
 // ─── Graceful Shutdown ────────────────────────────────────────────────────────
 const shutdown = async (signal) => {
   logger.info(`\n${signal} received — shutting down gracefully...`);
-  await orderBookService.persistAll(); // Final persist before exit
+
+  // Stop the simulator and flush pending data
+  const simulator = app.get("marketSimulator");
+  if (simulator) await simulator.stop();
+
+  await orderBookService.persistAll();
+
   server.close(async () => {
     await db.mongoose.connection.close();
     await redisClient.quit();
     logger.info("✅ Graceful shutdown complete");
     process.exit(0);
   });
-  setTimeout(() => { process.exit(1); }, 10000); // Force kill after 10s
+
+  setTimeout(() => { process.exit(1); }, 10000);
 };
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
 process.on("unhandledRejection", (err) => logger.error("Unhandled rejection:", err));
-process.on("uncaughtException", (err) => {
+process.on("uncaughtException",  (err) => {
   logger.error("Uncaught exception:", err);
   shutdown("UNCAUGHT_EXCEPTION");
 });

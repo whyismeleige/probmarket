@@ -11,5 +11,6 @@ db.market   = require("./Market.model");
 db.order    = require("./Order.model");
 db.trade    = require("./Trade.model");
 db.position = require("./Position.model");
+db.stock    = require("./Stock.model");  // ← Live market simulator stocks
 
 module.exports = db;

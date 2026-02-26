@@ -15,6 +15,7 @@ import sessionStorage from "redux-persist/lib/storage/session";
 import authReducer from "./slices/authSlice";
 import marketReducer from "./slices/marketSlice";
 import walletReducer from "./slices/walletSlice";
+import stockReducer from "./slices/stockSlice"
 import orderReducer from "./slices/orderSlice";
 
 // Auth: persisted to localStorage (survives browser close)
@@ -35,6 +36,7 @@ const rootReducer = combineReducers({
   market: marketReducer, // Not persisted — always fresh
   wallet: persistReducer(walletPersistConfig, walletReducer),
   orders: orderReducer, // Not persisted
+  stocks: stockReducer
 });
 
 export const store = configureStore({
