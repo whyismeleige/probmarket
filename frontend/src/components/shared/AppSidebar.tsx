@@ -17,8 +17,11 @@ import {
   Activity,
   ListOrdered,
   Zap,
+  Menu,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 const navItems = [
@@ -37,6 +40,24 @@ export function AppSidebar() {
   const { user } = useAppSelector((s) => s.auth);
   const { wallet } = useAppSelector((s) => s.wallet);
   const { isConnected } = useAppSelector((s) => s.stocks);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   const handleLogout = async () => {
     await dispatch(logout());
@@ -44,8 +65,8 @@ export function AppSidebar() {
     router.push("/auth");
   };
 
-  return (
-    <aside className="hidden lg:flex w-60 flex-col h-screen sticky top-0 bg-sidebar border-r border-sidebar-border shrink-0">
+  const SidebarContent = () => (
+    <>
       {/* ── Logo ──────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 px-5 h-14 border-b border-sidebar-border shrink-0">
         <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary">
@@ -57,6 +78,14 @@ export function AppSidebar() {
         <span className="ml-auto text-[10px] font-mono text-sidebar-foreground/50 bg-sidebar-accent/50 px-1.5 py-0.5 rounded">
           BETA
         </span>
+        {/* Close button — mobile only */}
+        <button
+          className="lg:hidden ml-1 p-1 rounded-md text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/50 transition-colors"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="size-4" />
+        </button>
       </div>
 
       {/* ── Wallet balance ────────────────────────────────────────── */}
@@ -91,19 +120,25 @@ export function AppSidebar() {
                     : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                 )}
               >
-                <Icon className={cn(
-                  "size-4 shrink-0",
-                  isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground",
-                  isLive && isConnected && "text-emerald-400"
-                )} />
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    isActive
+                      ? "text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground",
+                    isLive && isConnected && "text-emerald-400"
+                  )}
+                />
                 {label}
                 {badge && (
-                  <span className={cn(
-                    "ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full",
-                    isConnected
-                      ? "bg-emerald-500/20 text-emerald-400 animate-pulse"
-                      : "bg-muted text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full",
+                      isConnected
+                        ? "bg-emerald-500/20 text-emerald-400 animate-pulse"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
                     {badge}
                   </span>
                 )}
@@ -141,6 +176,64 @@ export function AppSidebar() {
           </Button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* ── Mobile top bar ────────────────────────────────────────── */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 gap-3">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-1.5 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/50 transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="size-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary">
+            <Activity className="size-3.5 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-sm tracking-tight text-sidebar-primary">
+            ProbMarket
+          </span>
+          <span className="text-[10px] font-mono text-sidebar-foreground/50 bg-sidebar-accent/50 px-1.5 py-0.5 rounded">
+            BETA
+          </span>
+        </div>
+        {/* Wallet quick-view on mobile */}
+        {wallet && (
+          <div className="ml-auto flex items-center gap-1 text-xs font-mono font-bold text-sidebar-accent-foreground">
+            <Wallet className="size-3.5 text-sidebar-foreground/50" />
+            ${(wallet.availableBalanceCents / 100).toFixed(2)}
+          </div>
+        )}
+      </header>
+
+      {/* ── Mobile drawer backdrop ────────────────────────────────── */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Mobile slide-in drawer ────────────────────────────────── */}
+      <aside
+        className={cn(
+          "lg:hidden fixed top-0 left-0 z-50 h-screen w-72 flex flex-col bg-sidebar border-r border-sidebar-border transition-transform duration-300 ease-in-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+        aria-hidden={!mobileOpen}
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* ── Desktop sidebar (unchanged) ───────────────────────────── */}
+      <aside className="hidden lg:flex w-60 flex-col h-screen sticky top-0 bg-sidebar border-r border-sidebar-border shrink-0">
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

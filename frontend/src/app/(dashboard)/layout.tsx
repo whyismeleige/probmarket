@@ -41,7 +41,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <main className="flex-1 min-w-0 overflow-auto">
+      {/*
+        On mobile the sidebar becomes a fixed overlay and we render a fixed top bar (h-14).
+        Add pt-14 on mobile so page content isn't hidden under that bar.
+        On lg+ the sidebar is in the normal flow so no extra padding is needed.
+      */}
+      <main className="flex-1 min-w-0 overflow-auto pt-14 lg:pt-0">
         {children}
       </main>
     </div>
