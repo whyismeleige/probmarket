@@ -1,8 +1,8 @@
 "use client";
 // components/markets/PriceChart.tsx
-// Shows YES price over time with volume bars. Multiple time ranges.
+// Shows YES probability over time with volume bars. Multiple time ranges.
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  ComposedChart,
   ReferenceLine,
 } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -40,96 +39,108 @@ interface ChartDataPoint {
 
 const formatTime = (timestamp: number, range: Range): string => {
   const d = new Date(timestamp);
-  if (range === "1H" || range === "6H") {
-    return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-  }
-  if (range === "1D") {
+  if (range === "1H" || range === "6H" || range === "1D") {
     return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   }
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-const CustomTooltip = ({ active, payload, label }: {
+// ── Custom tooltip ─────────────────────────────────────────────────────────────
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}: {
   active?: boolean;
   payload?: { value: number; name: string }[];
   label?: string;
-}) => {
+}) {
   if (!active || !payload?.length) return null;
   const yes = payload.find((p) => p.name === "yesPrice");
-  const no = payload.find((p) => p.name === "noPrice");
   const vol = payload.find((p) => p.name === "volume");
+
   return (
-    <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-xs space-y-1">
-      <p className="text-muted-foreground font-mono">{label}</p>
+    <div
+      className="rounded-lg border border-border bg-popover px-3 py-2 shadow-xl text-[11px] font-mono"
+      style={{ minWidth: 110 }}
+    >
+      <p className="text-muted-foreground mb-1">{label}</p>
       {yes && (
-        <p className="text-bullish font-semibold font-mono">
-          YES {yes.value}¢ <span className="text-muted-foreground font-normal">({yes.value}%)</span>
+        <p className="text-emerald-400 font-semibold">
+          YES {yes.value.toFixed(1)}¢
         </p>
       )}
-      {no && (
-        <p className="text-bearish font-semibold font-mono">
-          NO {no.value}¢ <span className="text-muted-foreground font-normal">({no.value}%)</span>
-        </p>
-      )}
-      {vol && vol.value > 0 && (
-        <p className="text-muted-foreground font-mono">
-          Vol: {vol.value.toLocaleString()}
+      {vol && (
+        <p className="text-muted-foreground">
+          Vol {vol.value.toFixed(0)}
         </p>
       )}
     </div>
   );
-};
+}
 
+// ── Main component ─────────────────────────────────────────────────────────────
 export function PriceChart({ marketId, currentYesPrice }: PriceChartProps) {
   const dispatch = useAppDispatch();
-  const history = useAppSelector((s) => s.market.priceHistory);
-  const [range, setRange] = useState<Range>("1D");
-  const [isLoading, setIsLoading] = useState(false);
-  const [chartType, setChartType] = useState<"area" | "candle">("area");
+  const { priceHistory, isLoading } = useAppSelector((s) => s.market);
 
-  const loadHistory = useCallback(
-    async (r: Range) => {
-      setIsLoading(true);
-      await dispatch(fetchPriceHistory({ id: marketId, range: r }));
-      setIsLoading(false);
-    },
-    [dispatch, marketId]
-  );
+  const [range, setRange] = useState<Range>("1D");
+  const [chartType, setChartType] = useState<"area" | "volume">("area");
+
+  // ✅ FIX: recharts' ResponsiveContainer reads DOM dimensions on mount.
+  // In Next.js SSR the DOM doesn't exist, so we defer rendering to the client.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    loadHistory(range);
-  }, [range, loadHistory]);
+    if (marketId) {
+      dispatch(fetchPriceHistory({ id: marketId, range }));
+    }
+  }, [marketId, range, dispatch]);
 
-  const chartData: ChartDataPoint[] = history.map((point) => ({
-    time: formatTime(new Date(point.timestamp).getTime(), range),
-    yesPrice: point.yesPrice,
-    noPrice: 100 - point.yesPrice,
-    volume: point.volume,
-    timestamp: new Date(point.timestamp).getTime(),
-  }));
+  // Transform backend PricePoint array → chart-friendly shape
+  const chartData: ChartDataPoint[] = (priceHistory ?? []).map(
+    (pt: PricePoint) => ({
+      time: formatTime(new Date(pt.timestamp).getTime(), range),
+      yesPrice: pt.yesPrice,
+      noPrice: 100 - pt.yesPrice,
+      volume: pt.volume ?? 0,
+      timestamp: new Date(pt.timestamp).getTime(),
+    }),
+  );
 
-  const latestPrice = chartData[chartData.length - 1]?.yesPrice ?? currentYesPrice ?? 50;
-  const firstPrice = chartData[0]?.yesPrice ?? 50;
-  const priceChange = latestPrice - firstPrice;
+  const priceChange =
+    chartData.length >= 2
+      ? chartData[chartData.length - 1].yesPrice - chartData[0].yesPrice
+      : 0;
   const isPositive = priceChange >= 0;
 
-  const gradientId = `yesGrad-${marketId}`;
+  // Gradient IDs — stable per component instance
+  const areaGradId = `price-chart-area-${marketId}`;
 
   return (
     <div className="space-y-3">
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-end justify-between">
+      {/* ── Header row ──────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono tabular-nums">
-              {latestPrice}¢
+            <span className="text-2xl font-black font-mono tabular-nums">
+              {currentYesPrice ?? chartData[chartData.length - 1]?.yesPrice ?? 50}¢
             </span>
-            <span className={`text-sm font-mono font-semibold ${isPositive ? "text-bullish" : "text-bearish"}`}>
-              {isPositive ? "+" : ""}{priceChange.toFixed(1)}¢
+            <span
+              className={`text-sm font-semibold font-mono ${
+                isPositive ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {isPositive ? "+" : ""}
+              {priceChange.toFixed(1)}¢
             </span>
           </div>
           <p className="text-xs text-muted-foreground">YES probability</p>
         </div>
+
         {/* Chart type toggle */}
         <div className="flex gap-1">
           <Button
@@ -142,16 +153,16 @@ export function PriceChart({ marketId, currentYesPrice }: PriceChartProps) {
           </Button>
           <Button
             size="sm"
-            variant={chartType === "candle" ? "secondary" : "ghost"}
+            variant={chartType === "volume" ? "secondary" : "ghost"}
             className="h-7 text-xs"
-            onClick={() => setChartType("candle")}
+            onClick={() => setChartType("volume")}
           >
             Vol
           </Button>
         </div>
       </div>
 
-      {/* ── Time range selector ──────────────────────────────────────── */}
+      {/* ── Time range selector ──────────────────────────────────── */}
       <div className="flex gap-1">
         {RANGES.map((r) => (
           <Button
@@ -166,110 +177,126 @@ export function PriceChart({ marketId, currentYesPrice }: PriceChartProps) {
         ))}
       </div>
 
-      {/* ── Chart ─────────────────────────────────────────────────────── */}
+      {/* ── Chart ───────────────────────────────────────────────── */}
       <div className="h-48 w-full">
-        {isLoading ? (
-          <Skeleton className="h-full w-full" />
+        {isLoading? (
+          <Skeleton className="h-full w-full rounded-lg" />
+        ) : !mounted ? (
+          // Show placeholder while hydrating to avoid SSR mismatch
+          <Skeleton className="h-full w-full rounded-lg opacity-40" />
         ) : chartData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-            No price history yet
+          <div className="h-full flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border">
+            <p className="text-sm text-muted-foreground">No price history yet</p>
+            <p className="text-xs text-muted-foreground/60">
+              Data will appear once trading begins
+            </p>
           </div>
         ) : chartType === "area" ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <AreaChart
+              data={chartData}
+              margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+            >
               <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="oklch(0.65 0.18 145)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="oklch(0.65 0.18 145)" stopOpacity={0} />
+                <linearGradient id={areaGradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="oklch(0.65 0.18 145)"
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="oklch(0.65 0.18 145)"
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                opacity={0.5}
+              />
               <XAxis
                 dataKey="time"
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}
+                tick={{
+                  fontSize: 10,
+                  fill: "var(--muted-foreground)",
+                  fontFamily: "var(--font-mono)",
+                }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}
+                tick={{
+                  fontSize: 10,
+                  fill: "var(--muted-foreground)",
+                  fontFamily: "var(--font-mono)",
+                }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => `${v}¢`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={50} stroke="var(--border)" strokeDasharray="4 4" strokeOpacity={0.6} />
+              <ReferenceLine
+                y={50}
+                stroke="var(--border)"
+                strokeDasharray="4 4"
+                strokeOpacity={0.6}
+              />
               <Area
                 type="monotone"
                 dataKey="yesPrice"
                 stroke="oklch(0.65 0.18 145)"
                 strokeWidth={2}
-                fill={`url(#${gradientId})`}
+                fill={`url(#${areaGradId})`}
                 dot={false}
                 activeDot={{ r: 4, fill: "oklch(0.65 0.18 145)" }}
               />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
+          /* Volume bar chart */
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+            <BarChart
+              data={chartData}
+              margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                opacity={0.5}
+              />
               <XAxis
                 dataKey="time"
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}
+                tick={{
+                  fontSize: 10,
+                  fill: "var(--muted-foreground)",
+                  fontFamily: "var(--font-mono)",
+                }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis
-                yAxisId="price"
-                domain={[0, 100]}
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) => `${v}¢`}
-              />
-              <YAxis
-                yAxisId="vol"
-                orientation="right"
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                tick={{
+                  fontSize: 10,
+                  fill: "var(--muted-foreground)",
+                  fontFamily: "var(--font-mono)",
+                }}
                 tickLine={false}
                 axisLine={false}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar
-                yAxisId="vol"
                 dataKey="volume"
-                fill="var(--muted)"
-                opacity={0.6}
+                fill="oklch(0.55 0.22 264 / 0.6)"
                 radius={[2, 2, 0, 0]}
               />
-              <Area
-                yAxisId="price"
-                type="monotone"
-                dataKey="yesPrice"
-                stroke="oklch(0.65 0.18 145)"
-                strokeWidth={2}
-                fill="none"
-                dot={false}
-              />
-            </ComposedChart>
+            </BarChart>
           </ResponsiveContainer>
         )}
-      </div>
-
-      {/* ── NO price overlay note ──────────────────────────────────── */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <div className="w-3 h-0.5 bg-[oklch(0.65_0.18_145)] rounded" />
-          YES {latestPrice}¢
-        </span>
-        <span className="flex items-center gap-1">
-          <div className="w-3 h-0.5 bg-[oklch(0.58_0.22_17.5)] rounded" />
-          NO {100 - latestPrice}¢
-        </span>
-        <span className="ml-auto font-mono">{chartData.length} data points</span>
       </div>
     </div>
   );

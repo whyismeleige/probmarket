@@ -17,7 +17,7 @@ import type { Order } from "@/types";
 
 export default function OrdersPage() {
   const dispatch = useAppDispatch();
-  const { orders, isLoading: ordersIsLoading, isCancelling } = useAppSelector((s) => s.orders);
+  const { orders, isPlacing, isCancelling } = useAppSelector((s) => s.orders);
 
   useEffect(() => {
     dispatch(fetchMyOrders({ limit: 50 }));
@@ -59,7 +59,7 @@ export default function OrdersPage() {
         </TabsList>
 
         <TabsContent value="open" className="mt-4 space-y-2">
-          {ordersIsLoading ? (
+          {isPlacing ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)
           ) : openOrders.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -81,7 +81,7 @@ export default function OrdersPage() {
         </TabsContent>
 
         <TabsContent value="closed" className="mt-4 space-y-2">
-          {ordersIsLoading ? (
+          {isPlacing ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16" />)
           ) : closedOrders.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">No order history</div>
