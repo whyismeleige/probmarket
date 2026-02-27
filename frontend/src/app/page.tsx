@@ -13,7 +13,11 @@ import {
   Zap,
   PieChart,
   ArrowRight,
+  Wallet,
+  Search,
+  BadgeDollarSign,
 } from "lucide-react";
+import { TopographyBackground } from "@/components/background/TopographyBackground";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -40,9 +44,9 @@ const MARKETS = [
 ];
 
 const HOW_STEPS = [
-  { num: "01", icon: "💳", title: "Fund your account", desc: "Deposit funds instantly. Your balance is held safely and you can withdraw at any time with no lock-up period." },
-  { num: "02", icon: "🔍", title: "Pick a market",     desc: "Browse hundreds of markets across politics, finance, sports, and tech. Every market has a clear resolution criteria." },
-  { num: "03", icon: "⚡", title: "Place your order",  desc: "Buy YES or NO shares at any price between 1¢ and 99¢. When the event resolves, winning shares pay out $1.00 each." },
+  { num: "01", Icon: Wallet,          title: "Fund your account", desc: "Deposit funds instantly. Your balance is held safely and you can withdraw at any time with no lock-up period." },
+  { num: "02", Icon: Search,          title: "Pick a market",     desc: "Browse hundreds of markets across politics, finance, sports, and tech. Every market has a clear resolution criteria." },
+  { num: "03", Icon: BadgeDollarSign, title: "Place your order",  desc: "Buy YES or NO shares at any price between 1¢ and 99¢. When the event resolves, winning shares pay out $1.00 each." },
 ];
 
 const FEATURES = [
@@ -144,7 +148,14 @@ export default function LandingPage() {
 
       {/* Force dark-mode so all globals.css dark vars activate */}
       <div className="dark grain lp-body">
-        <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
+        <TopographyBackground
+          lineColor="rgba(201, 168, 76, 0.09)"
+          backgroundColor="#1c1c1c"
+          lineCount={18}
+          speed={0.6}
+          strokeWidth={0.8}
+        />
+        <div className="relative z-10 min-h-screen text-foreground overflow-x-hidden">
 
           {/* ══════════════════════════════════════════════════════════
               NAV
@@ -339,7 +350,7 @@ export default function LandingPage() {
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-5
                                       border border-[#C9A84C]/15 transition-colors group-hover:border-[#C9A84C]/30"
                         style={{ background: 'rgba(201,168,76,0.07)' }}>
-                        {step.icon}
+                        <step.Icon className="size-5 text-[#C9A84C]" />
                       </div>
                       <h3 className="lp-display text-[1.3rem] text-foreground mb-3">{step.title}</h3>
                       <p className="text-[0.85rem] text-muted-foreground leading-[1.7] font-light">{step.desc}</p>
